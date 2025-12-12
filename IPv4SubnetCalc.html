@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>IPv4 Subnet Calculator</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    input, button { margin: 5px; padding: 5px; }
+    .result { margin-top: 15px; padding: 10px; border: 1px solid #ccc; }
+    .error { color: red; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h2>IPv4 Subnet Calculator</h2>
+  <label>IP Address: <input type="text" id="ip" placeholder="192.168.1.10"></label><br>
+  <label>Subnet Mask or CIDR: <input type="text" id="mask" placeholder="255.255.255.0 or /24"></label><br>
+  <button onclick="calculateSubnet()">Calculate</button>
+
+  <div class="result" id="result"></div>
+
+  <script>
+    function validateIp(ip) {
+      const parts = ip.split('.');
+      if (parts.length !== 4) return false;
+      return parts.every(p => {
+        const num = Number(p);
+        return p !== '' && !isNaN(num) && num >= 0 && num <= 255;
+      });
+    }
+
+    function ipToInt(ip) {
+      return ip.split('.').reduce((acc, octet) => (acc << 8) + parseInt(octet, 10), 0) >>> 0;
+    }
+
+    function intToIp(int) {
+      return [(int >>> 24), (int >> 16 & 255), (int >> 8 & 255), (int & 255)].join('.');
+    }
+
+    function cidrToMask(prefix) {
+      const mask = (0xFFFFFFFF << (32 - prefix)) >>> 0;
+      return intToIp(mask);
+    }
+
+    function calculateSubnet() {
+      const ip = document.getElementById('ip').value.trim();
+      let maskInput = document.getElementById('mask').value.trim();
+
+      if (!ip || !maskInput) {
+        document.getElementById('result').innerHTML = "<span class='error'>Please enter both IP and Subnet Mask or CIDR.</span>";
+        return;
+      }
+
+      if (!validateIp(ip)) {
+        document.getElementById('result').innerHTML = "<span class='error'>Invalid IP address format.</span>";
+        return;
+      }
+
+      // Handle CIDR notation
+      if (maskInput.startsWith('/')) {
+        const prefix = parseInt(maskInput.slice(1), 10);
+        if (isNaN(prefix) || prefix < 0 || prefix > 32) {
+          document.getElementById('result').innerHTML = "<span class='error'>Invalid CIDR prefix.</span>";
+          return;
+        }
+        maskInput = cidrToMask(prefix);
+      } else {
+        if (!validateIp(maskInput)) {
+          document.getElementById('result').innerHTML = "<span class='error'>Invalid subnet mask format.</span>";
+          return;
+        }
+      }
+
+      const ipInt = ipToInt(ip);
+      const maskInt = ipToInt(maskInput);
+
+      const network = ipInt & maskInt;
+      const broadcast = network | (~maskInt >>> 0);
+
+      // Count mask bits
+      const maskBits = maskInt.toString(2).replace(/0/g, '').length;
+      const hostBits = 32 - maskBits;
+      const totalHosts = Math.pow(2, hostBits);
+      const usableHosts = totalHosts > 2 ? totalHosts - 2 : 0;
+
+      const firstHost = usableHosts > 0 ? network + 1 : null;
+      const lastHost = usableHosts > 0 ? broadcast - 1 : null;
+
+      document.getElementById('result').innerHTML = `
+        <strong>Results:</strong><br>
+        Network Address: ${intToIp(network)}<br>
+        Broadcast Address: ${intToIp(broadcast)}<br>
+        Subnet Mask: ${maskInput}<br>
+        Prefix Length: /${maskBits}<br>
+        Total Hosts: ${totalHosts}<br>
+        Usable Hosts: ${usableHosts}<br>
+        First Usable IP: ${firstHost ? intToIp(firstHost) : 'N/A'}<br>
+        Last Usable IP: ${lastHost ? intToIp(lastHost) : 'N/A'}
+      `;
+    }
+  </script>
+</body>
+</html>
