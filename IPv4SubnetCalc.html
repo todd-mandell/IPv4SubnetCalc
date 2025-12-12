@@ -94,7 +94,8 @@
         Total Hosts: ${totalHosts}<br>
         Usable Hosts: ${usableHosts}<br>
         First Usable IP: ${firstHost ? intToIp(firstHost) : 'N/A'}<br>
-        Last Usable IP: ${lastHost ? intToIp(lastHost) : 'N/A'}
+        Last Usable IP: ${lastHost ? intToIp(lastHost) : 'N/A'}<br>
+        Subnet and CIDR Value: ${intToIp(network)}/${maskBits}
       `;
     }
   </script>
